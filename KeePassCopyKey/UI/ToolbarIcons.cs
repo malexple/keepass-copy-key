@@ -4,6 +4,16 @@
 // got encoded/re-saved by whatever tool touched it last). Caller owns
 // the returned Bitmap and must Dispose it - see
 // KeePassCopyKeyExt.Terminate.
+//
+// Export and Import icons deliberately mirror each other: same tray
+// shape anchored at the bottom (y=10-13 in both), only the arrow
+// direction differs. Coordinates below are symmetric on purpose - each
+// arrow's shaft-and-head lines meet at exactly the same point (the tip),
+// and both arrows occupy the same y=1..9 vertical span above the tray.
+// A previous version had the import arrowhead's tip one pixel past the
+// shaft's end (y=10 vs y=9), which visually "sank" the whole arrow
+// toward the tray compared to the export icon - fixed by making both
+// arrows' tip coordinates match their shaft's end coordinate exactly.
 
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -12,19 +22,20 @@ namespace KeePassCopyKey.UI;
 
 internal static class ToolbarIcons
 {
-    public static Bitmap CreateKeyIcon()
+    public static Bitmap CreateExportIcon()
     {
         var bmp = new Bitmap(16, 16);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(Color.Transparent);
 
-        using var pen = new Pen(Color.FromArgb(150, 110, 20), 1.6f);
-        g.DrawEllipse(pen, 1, 4, 7, 7);       // bow of the key
-        g.DrawEllipse(pen, 3.2f, 6.2f, 2.6f, 2.6f); // hole in the bow
-        g.DrawLine(pen, 7.5f, 7.5f, 14, 7.5f);      // shaft
-        g.DrawLine(pen, 11, 7.5f, 11, 10.5f);        // tooth
-        g.DrawLine(pen, 13, 7.5f, 13, 9.5f);         // tooth
+        using var pen = new Pen(Color.FromArgb(150, 90, 20), 1.8f);
+        g.DrawLine(pen, 8, 9, 8, 1);            // arrow shaft, tip at y=1
+        g.DrawLine(pen, 4, 5, 8, 1);            // arrow head, left - meets shaft tip exactly
+        g.DrawLine(pen, 12, 5, 8, 1);           // arrow head, right - meets shaft tip exactly
+        g.DrawLine(pen, 2, 13, 14, 13);         // tray bottom
+        g.DrawLine(pen, 2, 13, 2, 10);          // tray left wall
+        g.DrawLine(pen, 14, 13, 14, 10);        // tray right wall
 
         return bmp;
     }
@@ -37,12 +48,12 @@ internal static class ToolbarIcons
         g.Clear(Color.Transparent);
 
         using var pen = new Pen(Color.FromArgb(40, 110, 50), 1.8f);
-        g.DrawLine(pen, 8, 1, 8, 9);           // arrow shaft (downward)
-        g.DrawLine(pen, 4, 6, 8, 10);          // arrow head, left
-        g.DrawLine(pen, 12, 6, 8, 10);         // arrow head, right
-        g.DrawLine(pen, 2, 13, 14, 13);        // tray bottom
-        g.DrawLine(pen, 2, 13, 2, 10);         // tray left wall
-        g.DrawLine(pen, 14, 13, 14, 10);       // tray right wall
+        g.DrawLine(pen, 8, 1, 8, 9);            // arrow shaft, tip at y=9
+        g.DrawLine(pen, 4, 5, 8, 9);            // arrow head, left - meets shaft tip exactly
+        g.DrawLine(pen, 12, 5, 8, 9);           // arrow head, right - meets shaft tip exactly
+        g.DrawLine(pen, 2, 13, 14, 13);         // tray bottom
+        g.DrawLine(pen, 2, 13, 2, 10);          // tray left wall
+        g.DrawLine(pen, 14, 13, 14, 10);        // tray right wall
 
         return bmp;
     }

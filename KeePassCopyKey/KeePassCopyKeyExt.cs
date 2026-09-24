@@ -3,6 +3,11 @@
 // PwEntry <-> KeyEntryRecord mapping and (b) wiring up both the Tools
 // menu and the main toolbar buttons.
 //
+// User-facing wording is "Export Keys" / "Import Keys", not "Copy" /
+// "Load" - see README for why. Internal field/method names below match
+// that same terminology now (Export.../Import...) rather than mixing
+// vocabularies.
+//
 // Toolbar button placement: KeePass's Plugin base class has no official
 // "add a toolbar button" extension point (only GetMenuItem for menus).
 // The community-standard workaround - documented on the KeePass
@@ -52,10 +57,10 @@ public sealed class KeePassCopyKeyExt : Plugin
     private IPluginHost? _host;
 
     private ToolStripSeparator? _toolbarSeparator;
-    private ToolStripButton? _copyButton;
-    private ToolStripButton? _loadButton;
-    private Bitmap? _copyIcon;
-    private Bitmap? _loadIcon;
+    private ToolStripButton? _exportButton;
+    private ToolStripButton? _importButton;
+    private Bitmap? _exportIcon;
+    private Bitmap? _importIcon;
 
     private static bool IsRussianUi =>
         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ru", StringComparison.OrdinalIgnoreCase);
@@ -70,8 +75,8 @@ public sealed class KeePassCopyKeyExt : Plugin
     public override void Terminate()
     {
         RemoveToolbarButtons();
-        _copyIcon?.Dispose();
-        _loadIcon?.Dispose();
+        _exportIcon?.Dispose();
+        _importIcon?.Dispose();
     }
 
     public override ToolStripMenuItem? GetMenuItem(PluginMenuType t)
@@ -80,17 +85,19 @@ public sealed class KeePassCopyKeyExt : Plugin
 
         var root = new ToolStripMenuItem { Text = "Copy Key" };
 
-        var exportItem = new ToolStripMenuItem { Text = "Copy Keys..." };
+        var exportItem = new ToolStripMenuItem { Text = "Export Keys..." };
         exportItem.Click += (_, _) => RunExport();
         root.DropDownItems.Add(exportItem);
 
-        var importItem = new ToolStripMenuItem { Text = "Load Keys..." };
+        var importItem = new ToolStripMenuItem { Text = "Import Keys..." };
         importItem.Click += (_, _) => RunImport();
         root.DropDownItems.Add(importItem);
 
         return root;
     }
 
+    // Inserted right after the Quick Find combo box on the main
+    // toolbar, if one is found; otherwise appended at the end.
     private void AddToolbarButtons()
     {
         var toolMain = FindMainToolStrip();
@@ -106,30 +113,30 @@ public sealed class KeePassCopyKeyExt : Plugin
             }
         }
 
-        _copyIcon = ToolbarIcons.CreateKeyIcon();
-        _loadIcon = ToolbarIcons.CreateImportIcon();
+        _exportIcon = ToolbarIcons.CreateExportIcon();
+        _importIcon = ToolbarIcons.CreateImportIcon();
 
         _toolbarSeparator = new ToolStripSeparator();
 
-        _copyButton = new ToolStripButton
+        _exportButton = new ToolStripButton
         {
-            Image = _copyIcon,
+            Image = _exportIcon,
             DisplayStyle = ToolStripItemDisplayStyle.Image,
-            ToolTipText = IsRussianUi ? "Копировать ключи" : "Copy Keys",
+            ToolTipText = IsRussianUi ? "Экспортировать ключи" : "Export Keys",
         };
-        _copyButton.Click += (_, _) => RunExport();
+        _exportButton.Click += (_, _) => RunExport();
 
-        _loadButton = new ToolStripButton
+        _importButton = new ToolStripButton
         {
-            Image = _loadIcon,
+            Image = _importIcon,
             DisplayStyle = ToolStripItemDisplayStyle.Image,
-            ToolTipText = IsRussianUi ? "Загрузить ключи" : "Load Keys",
+            ToolTipText = IsRussianUi ? "Импортировать ключи" : "Import Keys",
         };
-        _loadButton.Click += (_, _) => RunImport();
+        _importButton.Click += (_, _) => RunImport();
 
         toolMain.Items.Insert(insertIndex, _toolbarSeparator);
-        toolMain.Items.Insert(insertIndex + 1, _copyButton);
-        toolMain.Items.Insert(insertIndex + 2, _loadButton);
+        toolMain.Items.Insert(insertIndex + 1, _exportButton);
+        toolMain.Items.Insert(insertIndex + 2, _importButton);
     }
 
     private void RemoveToolbarButtons()
@@ -138,8 +145,8 @@ public sealed class KeePassCopyKeyExt : Plugin
         if (toolMain is null) return;
 
         if (_toolbarSeparator is not null) toolMain.Items.Remove(_toolbarSeparator);
-        if (_copyButton is not null) toolMain.Items.Remove(_copyButton);
-        if (_loadButton is not null) toolMain.Items.Remove(_loadButton);
+        if (_exportButton is not null) toolMain.Items.Remove(_exportButton);
+        if (_importButton is not null) toolMain.Items.Remove(_importButton);
     }
 
     private ToolStrip? FindMainToolStrip() =>
@@ -150,7 +157,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwDatabase? db = _host!.Database;
         if (db is null || !db.IsOpen)
         {
-            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Copy Keys");
+            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Export Keys");
             return;
         }
 
@@ -160,7 +167,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwEntry[] chosen = selectionDialog.SelectedEntries;
         if (chosen.Length == 0)
         {
-            Info(IsRussianUi ? "Ничего не выбрано." : "No entries selected.", "Copy Keys");
+            Info(IsRussianUi ? "Ничего не выбрано." : "No entries selected.", "Export Keys");
             return;
         }
 
@@ -187,7 +194,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         }
         catch (Exception ex)
         {
-            Error($"Failed to write the file: {ex.Message}", "Copy Keys");
+            Error($"Failed to write the file: {ex.Message}", "Export Keys");
             return;
         }
         finally
@@ -199,7 +206,7 @@ public sealed class KeePassCopyKeyExt : Plugin
             IsRussianUi
                 ? $"Сохранено ключей: {chosen.Length}\n{saveDialog.FileName}"
                 : $"Saved {chosen.Length} key(s) to:\n{saveDialog.FileName}",
-            "Copy Keys");
+            "Export Keys");
     }
 
     private void RunImport()
@@ -207,7 +214,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwDatabase? db = _host!.Database;
         if (db is null || !db.IsOpen)
         {
-            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Load Keys");
+            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Import Keys");
             return;
         }
 
@@ -224,12 +231,12 @@ public sealed class KeePassCopyKeyExt : Plugin
         }
         catch (CryptographicException)
         {
-            Error(IsRussianUi ? "Неверный пароль или повреждённый файл." : "Wrong password or corrupted file.", "Load Keys");
+            Error(IsRussianUi ? "Неверный пароль или повреждённый файл." : "Wrong password or corrupted file.", "Import Keys");
             return;
         }
         catch (Exception ex)
         {
-            Error($"Failed to read the file: {ex.Message}", "Load Keys");
+            Error($"Failed to read the file: {ex.Message}", "Import Keys");
             return;
         }
 
@@ -252,7 +259,7 @@ public sealed class KeePassCopyKeyExt : Plugin
             IsRussianUi
                 ? $"Импортировано ключей: {records.Length}. Нажмите Ctrl+S, чтобы сохранить базу."
                 : $"Imported {records.Length} key(s). Save the database (Ctrl+S) to keep them.",
-            "Load Keys");
+            "Import Keys");
     }
 
     private static KeyEntryRecord ToRecord(PwEntry entry) => new(

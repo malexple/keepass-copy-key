@@ -8,11 +8,12 @@
 // closing.
 //
 // Layout is computed from the label's actual (possibly wrapped) height
-// instead of hardcoded Y offsets - same fix as ExportResultDialog. The
-// label text length varies between the export and import wording, and a
-// fixed offset for the password box assumed a single line; when the
-// text wrapped to two lines, the password box ended up overlapping the
-// second line instead of sitting below it.
+// instead of hardcoded Y offsets - same fix as ExportResultDialog used
+// before it was removed. The label text length varies between the
+// export and import wording, and a fixed offset for the password box
+// assumed a single line; when the text wrapped to two lines, the
+// password box ended up overlapping the second line instead of sitting
+// below it.
 
 using System.Drawing;
 using System.Windows.Forms;
@@ -33,7 +34,7 @@ internal sealed class PasswordDialog : Form
 
     public PasswordDialog(bool forExport)
     {
-        Text = forExport ? "Copy Keys — password" : "Load Keys — enter password";
+        Text = forExport ? "Export Keys — password" : "Import Keys — enter password";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = false;
@@ -87,7 +88,8 @@ internal sealed class PasswordDialog : Form
         {
             if (_passwordBox.Text.Length == 0)
             {
-                MessageBox.Show(this, "Password must not be empty.", "Copy Keys",
+                MessageBox.Show(this, "Password must not be empty.",
+                    forExport ? "Export Keys" : "Import Keys",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 DialogResult = DialogResult.None;
             }

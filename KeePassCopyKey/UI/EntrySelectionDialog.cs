@@ -8,11 +8,7 @@
 // Layout uses Anchor (not Dock) for the tree and the button row: the
 // dialog is resizable (FormBorderStyle.Sizable), and Anchor is what
 // makes OK/Cancel track the right edge and Select All/Select None track
-// the left edge symmetrically when the user resizes the window - with
-// the previous Location-only layout, OK/Cancel stayed pinned to their
-// original Top-Left position and visually "stuck" to the left after a
-// resize instead of hugging the right edge like Select All hugs the
-// left.
+// the left edge symmetrically when the user resizes the window.
 
 using System;
 using System.Collections.Generic;
@@ -34,7 +30,7 @@ internal sealed class EntrySelectionDialog : Form
 
     public EntrySelectionDialog(PwGroup rootGroup)
     {
-        Text = "Copy Keys — select entries";
+        Text = "Export Keys — select entries";
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterParent;
         ClientSize = new Size(480, 430);
