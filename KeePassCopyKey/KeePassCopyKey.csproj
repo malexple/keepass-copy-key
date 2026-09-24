@@ -15,10 +15,17 @@
   </PropertyGroup>
 
   <!--
-    Required by KeePass's plugin loader (keepass.info/help/v2_dev/plg_index.html,
-    "Plugin Conventions"). Must stay exactly this string.
+    Version stamping for releases. AssemblyVersion is kept fixed at the
+    major.minor.0.0 level (changing it breaks binding for anything that
+    referenced the old one, not a concern for a plugin with no external
+    consumers, but keeping the habit anyway) - FileVersion and
+    InformationalVersion carry the actual release number shown to users
+    (Tools > About, file Properties in Explorer).
   -->
   <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
     <Product>KeePass Plugin</Product>
   </PropertyGroup>
 
