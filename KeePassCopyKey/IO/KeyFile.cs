@@ -3,13 +3,9 @@
 // KeePassCopyKeyExt.cs for the PwEntry <-> KeyEntryRecord mapping.
 //
 // File format (little-endian) - ALWAYS encrypted, no plaintext escape
-// hatch. If the user leaves the password field blank on export, a
-// random password is generated instead of skipping encryption (see
-// KeePassCopyKeyExt.cs.RunExport and UI/PasswordDialog.cs) - "no
-// password entered" and "no encryption" are deliberately not the same
-// thing here:
+// hatch:
 //
-//   4 bytes   magic "KCK2"
+//   4 bytes   magic "KCK4"
 //   1 byte    format version (1)
 //   16 bytes  PBKDF2 salt
 //   4 bytes   PBKDF2 iteration count (Int32)
@@ -21,9 +17,20 @@
 //   per entry, 5x [4-byte UTF8 byte length][UTF8 bytes]:
 //     title, username, password, url, notes
 //
-// Magic changed from "KCK1" to "KCK2" on purpose - the old format could
-// produce unencrypted files, this one structurally cannot, and the two
-// should never be silently confused.
+// This is the fourth revision of this format's password semantics
+// (KCK1: optional password with a "do not encrypt" checkbox; KCK2:
+// mandatory password, silently auto-generated if left blank; KCK3:
+// optional password, blank meant plaintext). All three earlier designs
+// turned out to have a real problem: KCK1's checkbox could be forgotten,
+// KCK2 silently replaced a would-be-empty password behind the user's
+// back, and KCK3's "no password, but still encrypted" turned out to be
+// cryptographically impossible without either a hardcoded key (fake
+// security) or asymmetric encryption (a much bigger feature - see
+// project discussion). The actual fix is enforcing a non-empty password
+// at the UI layer (see UI/PasswordDialog.cs, which now blocks OK on an
+// empty field instead of silently doing something on the user's behalf)
+// - KeyFile itself just refuses to write/read without one, as a
+// structural backstop regardless of what the UI does.
 
 using System;
 using System.IO;
@@ -37,14 +44,14 @@ internal readonly record struct KeyEntryRecord(string Title, string UserName, st
 
 internal static class KeyFile
 {
-    private static readonly byte[] Magic = Encoding.ASCII.GetBytes("KCK2");
+    private static readonly byte[] Magic = Encoding.ASCII.GetBytes("KCK4");
     private const byte FormatVersion = 1;
     private const int NonceLength = 24;
 
     public static void Write(string path, byte[] payload, string password)
     {
         if (string.IsNullOrEmpty(password))
-            throw new ArgumentException("password must not be empty - generate one if the user left it blank", nameof(password));
+            throw new ArgumentException("password must not be empty", nameof(password));
 
         byte[] salt = KeyFileCrypto.RandomBytes(KeyFileCrypto.SaltLength);
         int iterations = KeyFileCrypto.DefaultIterations;
@@ -81,7 +88,7 @@ internal static class KeyFile
 
         byte[] magic = br.ReadBytes(Magic.Length);
         if (!MagicMatches(magic))
-            throw new InvalidDataException("not a keepass-copy-key file (or it's the old, unencrypted-capable KCK1 format)");
+            throw new InvalidDataException("not a keepass-copy-key file (or an older/incompatible format)");
 
         byte version = br.ReadByte();
         if (version != FormatVersion)

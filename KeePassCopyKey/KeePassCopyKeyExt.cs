@@ -14,15 +14,32 @@
 // removed again in Terminate() - KeePass does not do this for you. The
 // two icon Bitmaps (see UI/ToolbarIcons.cs) are owned by this class and
 // must be disposed there too.
+//
+// Password is always mandatory now (see IO/KeyFile.cs) - PasswordDialog
+// itself blocks OK on an empty field, so by the time ShowDialog returns
+// OK here, Password is guaranteed non-empty. No post-save "here's your
+// password" dialog either: the (editable, pre-filled) password is shown
+// *before* the file is written, so repeating it afterward was redundant.
+//
+// UI refresh after import: KeePass does NOT automatically refresh the
+// group tree / entry list after a plugin modifies the database
+// in-memory (PwGroup.AddEntry etc.) - this is deliberate, for
+// performance, per the KeePass author's own forum guidance. The fix is
+// to call MainForm.UpdateUI explicitly; the exact parameter order below
+// is confirmed from other real KeePass plugins' source
+// (bRecreateTabBar, dsSelect, bUpdateGroupList, pgSelect,
+// bUpdateEntryList, pgEntrySource, bSetModified). Passing db.RootGroup
+// as both pgSelect and pgEntrySource selects the Root group in the tree
+// AND shows its entry list.
 
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Windows.Forms;
 using KeePass.Plugins;
-using KeePassCopyKey.Crypto;
 using KeePassCopyKey.IO;
 using KeePassCopyKey.UI;
 using KeePassLib;
@@ -39,6 +56,9 @@ public sealed class KeePassCopyKeyExt : Plugin
     private ToolStripButton? _loadButton;
     private Bitmap? _copyIcon;
     private Bitmap? _loadIcon;
+
+    private static bool IsRussianUi =>
+        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("ru", StringComparison.OrdinalIgnoreCase);
 
     public override bool Initialize(IPluginHost host)
     {
@@ -71,11 +91,6 @@ public sealed class KeePassCopyKeyExt : Plugin
         return root;
     }
 
-    // Inserted right after the Quick Find combo box on the main
-    // toolbar, if one is found; otherwise appended at the end. The
-    // Quick Find box is the only ToolStripComboBox on that toolbar, so
-    // it's located by type rather than by (undocumented, version-
-    // dependent) control name.
     private void AddToolbarButtons()
     {
         var toolMain = FindMainToolStrip();
@@ -100,7 +115,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         {
             Image = _copyIcon,
             DisplayStyle = ToolStripItemDisplayStyle.Image,
-            ToolTipText = "Copy Keys — select entries and export them to an encrypted file",
+            ToolTipText = IsRussianUi ? "Копировать ключи" : "Copy Keys",
         };
         _copyButton.Click += (_, _) => RunExport();
 
@@ -108,7 +123,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         {
             Image = _loadIcon,
             DisplayStyle = ToolStripItemDisplayStyle.Image,
-            ToolTipText = "Load Keys — import entries from an encrypted keepass-copy-key file",
+            ToolTipText = IsRussianUi ? "Загрузить ключи" : "Load Keys",
         };
         _loadButton.Click += (_, _) => RunImport();
 
@@ -135,7 +150,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwDatabase? db = _host!.Database;
         if (db is null || !db.IsOpen)
         {
-            Info("Open a database first.", "Copy Keys");
+            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Copy Keys");
             return;
         }
 
@@ -145,16 +160,14 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwEntry[] chosen = selectionDialog.SelectedEntries;
         if (chosen.Length == 0)
         {
-            Info("No entries selected.", "Copy Keys");
+            Info(IsRussianUi ? "Ничего не выбрано." : "No entries selected.", "Copy Keys");
             return;
         }
 
+        // PasswordDialog blocks OK on an empty field, so Password here
+        // is guaranteed non-empty.
         using var passwordDialog = new PasswordDialog(forExport: true);
         if (passwordDialog.ShowDialog(_host.MainWindow) != DialogResult.OK) return;
-
-        string password = string.IsNullOrEmpty(passwordDialog.Password)
-            ? KeyFileCrypto.GeneratePassword()
-            : passwordDialog.Password;
 
         using var saveDialog = new SaveFileDialog
         {
@@ -170,7 +183,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         byte[] payload = KeyFile.SerializeEntries(records);
         try
         {
-            KeyFile.Write(saveDialog.FileName, payload, password);
+            KeyFile.Write(saveDialog.FileName, payload, passwordDialog.Password);
         }
         catch (Exception ex)
         {
@@ -182,8 +195,11 @@ public sealed class KeePassCopyKeyExt : Plugin
             Array.Clear(payload, 0, payload.Length);
         }
 
-        using var resultDialog = new ExportResultDialog(password, saveDialog.FileName, chosen.Length);
-        resultDialog.ShowDialog(_host.MainWindow);
+        Info(
+            IsRussianUi
+                ? $"Сохранено ключей: {chosen.Length}\n{saveDialog.FileName}"
+                : $"Saved {chosen.Length} key(s) to:\n{saveDialog.FileName}",
+            "Copy Keys");
     }
 
     private void RunImport()
@@ -191,7 +207,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         PwDatabase? db = _host!.Database;
         if (db is null || !db.IsOpen)
         {
-            Info("Open a database first.", "Load Keys");
+            Info(IsRussianUi ? "Сначала откройте базу." : "Open a database first.", "Load Keys");
             return;
         }
 
@@ -208,7 +224,7 @@ public sealed class KeePassCopyKeyExt : Plugin
         }
         catch (CryptographicException)
         {
-            Error("Wrong password or corrupted file.", "Load Keys");
+            Error(IsRussianUi ? "Неверный пароль или повреждённый файл." : "Wrong password or corrupted file.", "Load Keys");
             return;
         }
         catch (Exception ex)
@@ -230,7 +246,13 @@ public sealed class KeePassCopyKeyExt : Plugin
         foreach (var record in records)
             db.RootGroup.AddEntry(ToPwEntry(record), true);
 
-        Info($"Imported {records.Length} key(s). Save the database (Ctrl+S) to keep them.", "Load Keys");
+        _host.MainWindow.UpdateUI(false, null, true, db.RootGroup, true, db.RootGroup, true);
+
+        Info(
+            IsRussianUi
+                ? $"Импортировано ключей: {records.Length}. Нажмите Ctrl+S, чтобы сохранить базу."
+                : $"Imported {records.Length} key(s). Save the database (Ctrl+S) to keep them.",
+            "Load Keys");
     }
 
     private static KeyEntryRecord ToRecord(PwEntry entry) => new(

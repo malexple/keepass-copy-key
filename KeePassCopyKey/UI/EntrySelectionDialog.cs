@@ -4,6 +4,15 @@
 // (both subgroups and entries); checking/unchecking a single entry does
 // not affect its parent group's own check state (no tri-state/
 // indeterminate handling - keeping this simple on purpose).
+//
+// Layout uses Anchor (not Dock) for the tree and the button row: the
+// dialog is resizable (FormBorderStyle.Sizable), and Anchor is what
+// makes OK/Cancel track the right edge and Select All/Select None track
+// the left edge symmetrically when the user resizes the window - with
+// the previous Location-only layout, OK/Cancel stayed pinned to their
+// original Top-Left position and visually "stuck" to the left after a
+// resize instead of hugging the right edge like Select All hugs the
+// left.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +25,7 @@ namespace KeePassCopyKey.UI;
 internal sealed class EntrySelectionDialog : Form
 {
     private const int ButtonHeight = 30;
+    private const int BottomAreaHeight = 95;
 
     private readonly TreeView _tree;
     private bool _suppressCheckEvents;
@@ -32,8 +42,9 @@ internal sealed class EntrySelectionDialog : Form
 
         _tree = new TreeView
         {
-            Dock = DockStyle.Top,
-            Height = 335,
+            Location = new Point(0, 0),
+            Size = new Size(ClientSize.Width, ClientSize.Height - BottomAreaHeight),
+            Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             CheckBoxes = true,
         };
         _tree.AfterCheck += Tree_AfterCheck;
@@ -46,6 +57,7 @@ internal sealed class EntrySelectionDialog : Form
             Text = "Select All",
             Location = new Point(12, 345),
             Size = new Size(100, ButtonHeight),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
         };
         selectAllButton.Click += (_, _) => SetAllChecked(true);
 
@@ -54,6 +66,7 @@ internal sealed class EntrySelectionDialog : Form
             Text = "Select None",
             Location = new Point(120, 345),
             Size = new Size(110, ButtonHeight),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Left,
         };
         selectNoneButton.Click += (_, _) => SetAllChecked(false);
 
@@ -61,8 +74,9 @@ internal sealed class EntrySelectionDialog : Form
         {
             Text = "OK",
             DialogResult = DialogResult.OK,
-            Location = new Point(312, 390),
+            Location = new Point(300, 390),
             Size = new Size(80, ButtonHeight),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
         };
         okButton.Click += (_, _) => CollectSelection();
 
@@ -70,8 +84,9 @@ internal sealed class EntrySelectionDialog : Form
         {
             Text = "Cancel",
             DialogResult = DialogResult.Cancel,
-            Location = new Point(400, 390),
+            Location = new Point(388, 390),
             Size = new Size(80, ButtonHeight),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
         };
 
         Controls.Add(_tree);

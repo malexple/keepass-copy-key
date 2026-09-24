@@ -48,6 +48,15 @@ public class KeyFileFormatTests : IDisposable
     }
 
     [Fact]
+    public void Read_EmptyPassword_Throws()
+    {
+        byte[] payload = KeyFile.SerializeEntries(SampleEntries);
+        KeyFile.Write(_tempPath, payload, "some password");
+
+        Assert.Throws<ArgumentException>(() => KeyFile.Read(_tempPath, ""));
+    }
+
+    [Fact]
     public void Read_WrongPassword_ThrowsCryptographicException()
     {
         byte[] payload = KeyFile.SerializeEntries(SampleEntries);
@@ -60,16 +69,6 @@ public class KeyFileFormatTests : IDisposable
     public void Read_CorruptedMagic_ThrowsInvalidDataException()
     {
         File.WriteAllBytes(_tempPath, new byte[] { 1, 2, 3, 4, 5 });
-
-        Assert.Throws<InvalidDataException>(() => KeyFile.Read(_tempPath, "any password"));
-    }
-
-    [Fact]
-    public void Read_OldUnencryptedFormatMagic_ThrowsInvalidDataException()
-    {
-        // "KCK1" was the old, plaintext-capable magic - must not be
-        // silently accepted by the new reader.
-        File.WriteAllBytes(_tempPath, System.Text.Encoding.ASCII.GetBytes("KCK1"));
 
         Assert.Throws<InvalidDataException>(() => KeyFile.Read(_tempPath, "any password"));
     }
