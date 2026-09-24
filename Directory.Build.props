@@ -1,0 +1,39 @@
+<Project>
+
+  <!--
+    Shared by both KeePassCopyKey/KeePassCopyKey.csproj and
+    KeePassCopyKey.Tests/KeePassCopyKey.Tests.csproj - picked up
+    automatically by MSBuild from the repo root, no explicit <Import/>
+    needed in either project file.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    Reproducible builds - same rationale as keepasshttp2's own .csproj:
+    Deterministic (byte-identical IL/metadata for identical inputs),
+    ContinuousIntegrationBuild (strips this machine's absolute source
+    paths from embedded debug info), PathMap (normalizes the repo path
+    to a fixed token per-project, using $(MSBuildProjectName) so the two
+    projects don't collide on the same token).
+
+    Reminder (see KeePassCopyKey.csproj): an identical DLL hash across
+    machines additionally requires building against the same KeePass.exe
+    version, not just the same SDK/these flags.
+  -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PathMap>$(MSBuildProjectDirectory)=/keepass-copy-key/$(MSBuildProjectName)</PathMap>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <KeePassDir Condition="'$(KeePassDir)' == ''">d:\program\TC UP\MEDIA\Programs\KeePass</KeePassDir>
+  </PropertyGroup>
+
+</Project>

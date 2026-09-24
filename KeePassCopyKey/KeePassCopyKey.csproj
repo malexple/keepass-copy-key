@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Zero PackageReference / native DLL rule (same as keepasshttp2's own
+    plugin project - see that project's .csproj for the full rationale).
+    Shared properties (TargetFramework, Deterministic,
+    ContinuousIntegrationBuild, PathMap, KeePassDir) come from
+    ../Directory.Build.props.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>KeePassCopyKey</RootNamespace>
+    <AssemblyName>KeePassCopyKey</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Required by KeePass's plugin loader (keepass.info/help/v2_dev/plg_index.html,
+    "Plugin Conventions"). Must stay exactly this string.
+  -->
+  <PropertyGroup>
+    <Product>KeePass Plugin</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="KeePass">
+      <HintPath>$(KeePassDir)\KeePass.exe</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+</Project>

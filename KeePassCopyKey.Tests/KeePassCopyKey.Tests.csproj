@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    NuGet packages are fine here - this project never ships to a user's
+    KeePass installation, it only runs in the dev/CI environment via
+    `dotnet test`. The "no NuGet" rule applies solely to
+    KeePassCopyKey/KeePassCopyKey.csproj (the actual plugin).
+
+    Deliberately NO reference to KeePass.exe here: IO/KeyFile.cs and
+    Crypto/KeyFileCrypto.cs work with the plain KeyEntryRecord type, not
+    PwEntry/PwDatabase - see KeePassCopyKeyExt.cs for where the PwEntry
+    <-> KeyEntryRecord mapping happens. This keeps the whole test suite
+    runnable on any machine, including CI, without a KeePass install.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KeePassCopyKey\KeePassCopyKey.csproj" />
+  </ItemGroup>
+
+</Project>

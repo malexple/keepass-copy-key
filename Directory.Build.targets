@@ -1,0 +1,33 @@
+<Project>
+
+  <!--
+    Run the test suite automatically as part of `dotnet build` /
+    `dotnet build KeePassCopyKey.sln` from the repo root - no separate
+    test step to remember.
+
+    RECURSION GUARD (SkipPostBuildTests): `dotnet test` below builds
+    KeePassCopyKey.Tests.csproj, which has a ProjectReference to
+    KeePassCopyKey.csproj - so it rebuilds KeePassCopyKey too. That
+    rebuild fires this same AfterTargets="Build" hook again (it matches
+    MSBuildProjectName == 'KeePassCopyKey' just like the outer build
+    did), which would call `dotnet test` again, which rebuilds
+    KeePassCopyKey again... infinite loop (this is exactly what was
+    observed: the DLL got built 3 times before the build was cancelled).
+
+    Fix: the outer `dotnet test` invocation passes -p:SkipPostBuildTests=true
+    as a global MSBuild property. Global properties set on the command
+    line flow down to every project built as part of that invocation,
+    including KeePassCopyKey.csproj when it's rebuilt as a
+    ProjectReference - so the *inner* rebuild sees
+    SkipPostBuildTests=true and the condition below skips the target,
+    breaking the cycle. The *outer*, top-level `dotnet build` never sets
+    this property, so it's empty/false there and the target still runs
+    exactly once.
+  -->
+
+  <Target Name="RunTestsAfterBuild" AfterTargets="Build"
+          Condition="'$(MSBuildProjectName)' == 'KeePassCopyKey' AND '$(SkipPostBuildTests)' != 'true'">
+    <Exec Command="dotnet test &quot;$(MSBuildThisFileDirectory)KeePassCopyKey.Tests\KeePassCopyKey.Tests.csproj&quot; -c $(Configuration) --nologo -p:SkipPostBuildTests=true" />
+  </Target>
+
+</Project>
