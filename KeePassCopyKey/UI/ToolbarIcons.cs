@@ -7,13 +7,14 @@
 //
 // Export and Import icons deliberately mirror each other: same tray
 // shape anchored at the bottom (y=10-13 in both), only the arrow
-// direction differs. Coordinates below are symmetric on purpose - each
-// arrow's shaft-and-head lines meet at exactly the same point (the tip),
-// and both arrows occupy the same y=1..9 vertical span above the tray.
-// A previous version had the import arrowhead's tip one pixel past the
-// shaft's end (y=10 vs y=9), which visually "sank" the whole arrow
-// toward the tray compared to the export icon - fixed by making both
-// arrows' tip coordinates match their shaft's end coordinate exactly.
+// direction differs. The import arrow's blunt (non-arrowhead) end is
+// nudged one pixel further up (y=0 instead of y=1) than the export
+// arrow's blunt end - at this pixel size, the pointed tip of an arrow
+// reads as visually "reaching" slightly further than a plain cut shaft
+// end at the same coordinate, so the two icons looked mismatched in
+// height even though their bounding boxes were numerically identical.
+// This extra pixel on the shaft (not the tray, not the arrowhead)
+// compensates for that so both icons read as the same length.
 
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -48,7 +49,7 @@ internal static class ToolbarIcons
         g.Clear(Color.Transparent);
 
         using var pen = new Pen(Color.FromArgb(40, 110, 50), 1.8f);
-        g.DrawLine(pen, 8, 1, 8, 9);            // arrow shaft, tip at y=9
+        g.DrawLine(pen, 8, 0, 8, 9);            // arrow shaft, blunt end raised to y=0, tip at y=9
         g.DrawLine(pen, 4, 5, 8, 9);            // arrow head, left - meets shaft tip exactly
         g.DrawLine(pen, 12, 5, 8, 9);           // arrow head, right - meets shaft tip exactly
         g.DrawLine(pen, 2, 13, 14, 13);         // tray bottom
